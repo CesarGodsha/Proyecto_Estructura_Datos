@@ -1,247 +1,450 @@
 #include <iostream>
+#include <string>
 
 using namespace std;
 
-#define MAX 50
+//=================== ESTRUCTURAS ===================
 
-struct Paquete {
+struct Proceso {
     int id;
-    char destino[50];
-    float peso;
+    string nombre;
+    int prioridad;
+    string estado;
 };
 
-Paquete pila[MAX];
-int tope = -1;
+struct NodoProceso {
+    Proceso dato;
+    NodoProceso* sig;
+};
 
-bool estavacia() {
-    return tope == -1;
-}
+struct NodoMemoria {
+    int idProceso;
+    NodoMemoria* sig;
+};
 
-void insertar(Paquete dato) {
-    if (tope == MAX - 1) {
-        cout << "La pila está llena. No se puede insertar más elementos." << endl;
-    } else {
-        tope++;
-        pila[tope] = dato;
-        cout << "Paquete ID " << dato.id << " insertado." << endl;
+//=================== LISTA GENERAL ===================
+
+class ListaGeneral {
+private:
+    NodoProceso* cabeza;
+
+public:
+
+    ListaGeneral() {
+        cabeza = NULL;
     }
-}
 
-void eliminar() {
-    if (tope == -1) {
-        cout << "La pila está vacía. No se puede hacer eliminar." << endl;
-    } else {
-        cout << "Paquete ID " << pila[tope].id << " eliminado." << endl;
-        tope--;
-    }
-}
+    bool existeID(int id) {
 
-// DEFINIDA COMO INT: Devuelve el ID del paquete en la cima
-int cima() {
-    if (tope == -1) {
-        return -1; 
-    }
-    return pila[tope].id; // Retorna un entero (el ID) tal como pide el ejemplo
-}
+        NodoProceso* aux = cabeza;
 
-void imprimir() {
-    if (estavacia()) {
-        cout << "La pila está vacía." << endl;
-    } else {
-        cout << "Contenido de la pila (de cima a base): " << endl;
-        for (int i = tope; i >= 0; i--) {
-            cout << "ID: " << pila[i].id << " | Destino: " << pila[i].destino << " | Peso: " << pila[i].peso << " kg" << endl;
+        while(aux != NULL) {
+
+            if(aux->dato.id == id)
+                return true;
+
+            aux = aux->sig;
         }
-        cout << endl;
+
+        return false;
     }
-}
+
+    void insertar(Proceso p) {
+
+        if(existeID(p.id)) {
+            cout << "\nID duplicado.\n";
+            return;
+        }
+
+        NodoProceso* nuevo = new NodoProceso;
+
+        nuevo->dato = p;
+        nuevo->sig = cabeza;
+
+        cabeza = nuevo;
+
+        cout << "\nProceso registrado.\n";
+    }
+
+    NodoProceso* buscar(int id) {
+
+        NodoProceso* aux = cabeza;
+
+        while(aux != NULL) {
+
+            if(aux->dato.id == id)
+                return aux;
+
+            aux = aux->sig;
+        }
+
+        return NULL;
+    }
+
+    void modificar(int id) {
+
+        NodoProceso* p = buscar(id);
+
+        if(p == NULL) {
+            cout << "\nProceso no encontrado.\n";
+            return;
+        }
+
+        cout << "Nueva prioridad: ";
+        cin >> p->dato.prioridad;
+
+        cout << "\nActualizado.\n";
+    }
+
+    void eliminar(int id) {
+
+        NodoProceso* actual = cabeza;
+        NodoProceso* anterior = NULL;
+
+        while(actual != NULL &&
+              actual->dato.id != id) {
+
+            anterior = actual;
+            actual = actual->sig;
+        }
+
+        if(actual == NULL) {
+            cout << "\nNo encontrado.\n";
+            return;
+        }
+
+        if(anterior == NULL)
+            cabeza = actual->sig;
+        else
+            anterior->sig = actual->sig;
+
+        delete actual;
+
+        cout << "\nEliminado.\n";
+    }
+
+    void mostrar() {
+
+        NodoProceso* aux = cabeza;
+
+        cout << "\n=== PROCESOS ===\n";
+
+        while(aux != NULL) {
+
+            cout << "ID: "
+                 << aux->dato.id
+                 << " | Nombre: "
+                 << aux->dato.nombre
+                 << " | Prioridad: "
+                 << aux->dato.prioridad
+                 << " | Estado: "
+                 << aux->dato.estado
+                 << endl;
+
+            aux = aux->sig;
+        }
+    }
+};
+
+//=================== COLA PRIORIDAD ===================
+
+class ColaPrioridad {
+
+private:
+    NodoProceso* frente;
+
+public:
+
+    ColaPrioridad() {
+        frente = NULL;
+    }
+
+    bool vacia() {
+        return frente == NULL;
+    }
+
+    void insertar(Proceso p) {
+
+        NodoProceso* nuevo = new NodoProceso;
+
+        nuevo->dato = p;
+        nuevo->sig = NULL;
+
+        if(frente == NULL ||
+           p.prioridad < frente->dato.prioridad) {
+
+            nuevo->sig = frente;
+            frente = nuevo;
+            return;
+        }
+
+        NodoProceso* aux = frente;
+
+        while(aux->sig != NULL &&
+              aux->sig->dato.prioridad <= p.prioridad) {
+
+            aux = aux->sig;
+        }
+
+        nuevo->sig = aux->sig;
+        aux->sig = nuevo;
+    }
+
+    Proceso extraer() {
+
+        Proceso vacio;
+
+        vacio.id = -1;
+
+        if(vacia())
+            return vacio;
+
+        NodoProceso* aux = frente;
+
+        Proceso p = aux->dato;
+
+        frente = frente->sig;
+
+        delete aux;
+
+        return p;
+    }
+
+    void mostrar() {
+
+        NodoProceso* aux = frente;
+
+        cout << "\n=== COLA CPU ===\n";
+
+        while(aux != NULL) {
+
+            cout << aux->dato.nombre
+                 << " (P:"
+                 << aux->dato.prioridad
+                 << ")" << endl;
+
+            aux = aux->sig;
+        }
+    }
+};
+
+//=================== PILA MEMORIA ===================
+
+class PilaMemoria {
+
+private:
+    NodoMemoria* tope;
+
+public:
+
+    PilaMemoria() {
+        tope = NULL;
+    }
+
+    bool vacia() {
+        return tope == NULL;
+    }
+
+    void push(int id) {
+
+        NodoMemoria* nuevo = new NodoMemoria;
+
+        nuevo->idProceso = id;
+        nuevo->sig = tope;
+
+        tope = nuevo;
+    }
+
+    void pop() {
+
+        if(vacia()) {
+
+            cout << "\nMemoria vacia.\n";
+            return;
+        }
+
+        NodoMemoria* aux = tope;
+
+        tope = tope->sig;
+
+        delete aux;
+    }
+
+    void mostrar() {
+
+        NodoMemoria* aux = tope;
+
+        cout << "\n=== MEMORIA ===\n";
+
+        while(aux != NULL) {
+
+            cout << "Proceso "
+                 << aux->idProceso
+                 << endl;
+
+            aux = aux->sig;
+        }
+    }
+};
+
+//=================== MAIN ===================
 
 int main() {
-    setlocale(LC_CTYPE, "Spanish");
+
+    ListaGeneral lista;
+    ColaPrioridad cpu;
+    PilaMemoria memoria;
+
     int opcion;
 
-    Paquete pTemp;
-    Paquete pilaAux[MAX];
-    int topeAux;
-    bool encontrado;
-    int idBuscar;
-    float pesoLimite;
-
     do {
-        cout << "\n====================================";
-        cout << "\n     SISTEMA DE ENVIOS   ";
-        cout << "\n====================================";
-        cout << "\n[1] Registro de datos ";
-        cout << "\n[2] Ordenamiento ";
-        cout << "\n[3] Búsqueda ";
-        cout << "\n[4] Actualización ";
-        cout << "\n[5] Eliminación según criterio ";
-        cout << "\n[6] Mostrar datos";
-        cout << "\n[7] Salir";
-        cout << "\nSeleccione una opción: ";
+
+        cout << "\n=========================\n";
+        cout << " GESTOR DE PROCESOS\n";
+        cout << "=========================\n";
+        cout << "1. Registrar proceso\n";
+        cout << "2. Buscar proceso\n";
+        cout << "3. Modificar prioridad\n";
+        cout << "4. Eliminar proceso\n";
+        cout << "5. Mostrar procesos\n";
+        cout << "6. Planificar CPU\n";
+        cout << "7. Mostrar cola CPU\n";
+        cout << "8. Mostrar memoria\n";
+        cout << "9. Salir\n";
+        cout << "\nOpcion: ";
+
         cin >> opcion;
 
-        switch (opcion) {
-            case 1:
-                // ==========================================
-                // ESTRUCTURA: REGISTRO DE DATOS
-                // ==========================================
-                cout << "\n--- REGISTRAR PAQUETE ---\n";
-                cout << "Ingrese ID: ";
-                cin >> pTemp.id;
-                cin.ignore();
-                cout << "Ingrese Destino: ";
-                cin.getline(pTemp.destino, 50);
-                cout << "Ingrese Peso (kg): ";
-                cin >> pTemp.peso;
-                insertar(pTemp);
-                break;
+        switch(opcion) {
 
-            case 2:
-                // ==========================================
-                // ESTRUCTURA: ORDENAMIENTO
-                // ==========================================
-                if (estavacia()) {
-                    cout << "La pila está vacía. No se puede ordenar." << endl;
-                } else {
-                    topeAux = -1;
-                    while (tope != -1) {
-                        Paquete temporal = pila[tope]; // Guardamos el paquete completo
-                        eliminar();
+        case 1: {
 
-                        while (topeAux != -1 && pilaAux[topeAux].peso < temporal.peso) {
-                            insertar(pilaAux[topeAux]);
-                            topeAux--;
-                        }
-                        topeAux++;
-                        pilaAux[topeAux] = temporal;
-                    }
-                    while (topeAux != -1) {
-                        insertar(pilaAux[topeAux]);
-                        topeAux--;
-                    }
-                    cout << "Pila ordenada por peso correctamente." << endl;
-                }
-                break;
+            Proceso p;
 
-            case 3:
-                // ==========================================
-                // ESTRUCTURA: BÚSQUEDA
-                // ==========================================
-                if (estavacia()) {
-                    cout << "La pila está vacía." << endl;
-                } else {
-                    cout << "Ingrese el ID a buscar: ";
-                    cin >> idBuscar;
-                    encontrado = false;
-                    topeAux = -1;
+            cout << "ID: ";
+            cin >> p.id;
 
-                    while (tope != -1) {
-                        // Usamos cima() para comparar el entero (ID) de forma exacta a tu ejemplo
-                        if (cima() == idBuscar) { 
-                            encontrado = true;
-                            pTemp = pila[tope]; 
-                        }
-                        topeAux++;
-                        pilaAux[topeAux] = pila[tope];
-                        eliminar();
-                    }
-                    while (topeAux != -1) {
-                        insertar(pilaAux[topeAux]);
-                        topeAux--;
-                    }
+            cout << "Nombre: ";
+            cin >> p.nombre;
 
-                    if (encontrado) {
-                        cout << "\n[Paquete Encontrado]\n";
-                        cout << "ID: " << pTemp.id << "\nDestino: " << pTemp.destino << "\nPeso: " << pTemp.peso << " kg\n";
-                    } else {
-                        cout << "Paquete con ID " << idBuscar << " no encontrado." << endl;
-                    }
-                }
-                break;
+            cout << "Prioridad (1 alta, 2 media, 3 baja): ";
+            cin >> p.prioridad;
 
-            case 4:
-                // ==========================================
-                // ESTRUCTURA: ACTUALIZACIÓN
-                // ==========================================
-                if (estavacia()) {
-                    cout << "La pila está vacía." << endl;
-                } else {
-                    cout << "Ingrese el ID a actualizar: ";
-                    cin >> idBuscar;
-                    encontrado = false;
-                    topeAux = -1;
+            p.estado = "Listo";
 
-                    while (tope != -1) {
-                        Paquete actual = pila[tope];
-                        // Usamos cima() para comparar el ID entero
-                        if (cima() == idBuscar) { 
-                            cout << "Paquete encontrado. Ingrese el nuevo destino: ";
-                            cin.ignore();
-                            cin.getline(actual.destino, 50);
-                            encontrado = true;
-                        }
-                        topeAux++;
-                        pilaAux[topeAux] = actual;
-                        eliminar();
-                    }
-                    while (topeAux != -1) {
-                        insertar(pilaAux[topeAux]);
-                        topeAux--;
-                    }
+            lista.insertar(p);
+            cpu.insertar(p);
 
-                    if (encontrado) {
-                        cout << "¡Destino actualizado con éxito!" << endl;
-                    } else {
-                        cout << "Paquete con ID " << idBuscar << " no encontrado." << endl;
-                    }
-                }
-                break;
-
-            case 5:
-                // ==========================================
-                // ESTRUCTURA: ELIMINACIÓN SEGÚN CRITERIO
-                // ==========================================
-                if (estavacia()) {
-                    cout << "La pila está vacía." << endl;
-                } else {
-                    cout << "Ingrese el peso máximo permitido: ";
-                    cin >> pesoLimite;
-                    topeAux = -1;
-
-                    while (tope != -1) {
-                        if (pila[tope].peso > pesoLimite) {
-                            // Imprimimos usando cima() para mostrar el ID entero que se va a ir
-                            cout << "Paquete ID " << cima() << " superó el límite (" << pila[tope].peso << " kg). ";
-                            eliminar();
-                        } else {
-                            topeAux++;
-                            pilaAux[topeAux] = pila[tope];
-                            eliminar();
-                        }
-                    }
-                    while (topeAux != -1) {
-                        insertar(pilaAux[topeAux]);
-                        topeAux--;
-                    }
-                }
-                break;
-
-            case 6:
-                // ==========================================
-                // ESTRUCTURA: MOSTRAR DATOS
-                // ==========================================
-                imprimir();
-                break;
-
-            case 7:
-                cout << "Saliendo del programa..." << endl;
-                break;
-
-            default:
-                cout << "Opción inválida." << endl;
+            break;
         }
-    } while (opcion != 7);
+
+        case 2: {
+
+            int id;
+
+            cout << "ID a buscar: ";
+            cin >> id;
+
+            NodoProceso* encontrado =
+                lista.buscar(id);
+
+            if(encontrado) {
+
+                cout << "\nEncontrado:\n";
+
+                cout << encontrado->dato.nombre
+                     << endl;
+            }
+            else {
+
+                cout << "\nNo existe.\n";
+            }
+
+            break;
+        }
+
+        case 3: {
+
+            int id;
+
+            cout << "ID: ";
+            cin >> id;
+
+            lista.modificar(id);
+
+            break;
+        }
+
+        case 4: {
+
+            int id;
+
+            cout << "ID: ";
+            cin >> id;
+
+            lista.eliminar(id);
+
+            break;
+        }
+
+        case 5:
+
+            lista.mostrar();
+            break;
+
+        case 6: {
+
+            if(cpu.vacia()) {
+
+                cout << "\nNo hay procesos.\n";
+                break;
+            }
+
+            Proceso ejecutando =
+                cpu.extraer();
+
+            cout << "\nEjecutando: "
+                 << ejecutando.nombre
+                 << endl;
+
+            memoria.push(ejecutando.id);
+
+            char interrupcion;
+
+            cout << "Interrupcion? (s/n): ";
+            cin >> interrupcion;
+
+            if(interrupcion == 's' ||
+               interrupcion == 'S') {
+
+                cout << "\nContexto guardado.\n";
+            }
+            else {
+
+                cout << "\nProceso finalizado.\n";
+                memoria.pop();
+            }
+
+            break;
+        }
+
+        case 7:
+
+            cpu.mostrar();
+            break;
+
+        case 8:
+
+            memoria.mostrar();
+            break;
+
+        }
+
+    } while(opcion != 9);
+
+    cout << "\nFin del programa.\n";
+
+    system("pause");
 
     return 0;
 }
